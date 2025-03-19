@@ -20,10 +20,34 @@ function sanitize($data) {
     return $data;
 }
 
+// Handle Edit User Action
+if (isset($_POST['edit_user'])) {
+    $edit_id = sanitize($_POST['edit_id']);
+    $edit_username = sanitize($_POST['edit_username']);
+    $edit_email = sanitize($_POST['edit_email']);
+    $edit_phone = sanitize($_POST['edit_phone']);
+    $edit_description = sanitize($_POST['edit_description']);
+    
+    // Update user info
+    $update_query = "UPDATE `users details` SET username = ?, email = ?, phone = ?, description = ? WHERE id = ?";
+    $stmt = $conn->prepare($update_query);
+    $stmt->bind_param("ssssi", $edit_username, $edit_email, $edit_phone, $edit_description, $edit_id);
+    
+    if ($stmt->execute()) {
+        $_SESSION['success_message'] = "User updated successfully";
+    } else {
+        $_SESSION['error_message'] = "Error updating user: " . $conn->error;
+    }
+    
+    header("Location: dashboard.php");
+    exit();
+}
+
 // Handle Delete User Action
 if (isset($_GET['delete_id']) && !empty($_GET['delete_id'])) {
     $delete_id = sanitize($_GET['delete_id']);
     
+    // Delete user
     $delete_query = "DELETE FROM `users details` WHERE id = ?";
     $stmt = $conn->prepare($delete_query);
     $stmt->bind_param("i", $delete_id);
@@ -34,6 +58,7 @@ if (isset($_GET['delete_id']) && !empty($_GET['delete_id'])) {
         $_SESSION['error_message'] = "Error deleting user: " . $conn->error;
     }
     
+    // Redirect to refresh the page
     header("Location: dashboard.php");
     exit();
 }
@@ -112,7 +137,7 @@ $stmt->close();
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle header-profile" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <?php if (!empty($profile)): ?>
-                              <img src="<?php echo $profile; ?>" alt="Profile" class="profile-img me-2">
+                                <img src="<?php echo $profile; ?>" alt="Profile" class="profile-img me-2">
                             <?php else: ?>
                                 <i class="fas fa-user-circle fa-2x me-2 text-white"></i>
                             <?php endif; ?>
@@ -182,10 +207,55 @@ $stmt->close();
                                         <td><?php echo $row['phone']; ?></td>
                                         <td><?php echo (strlen($row['description']) > 50) ? substr($row['description'], 0, 50) . '...' : $row['description']; ?></td>
                                         <td class="action-buttons">
-                                            <a href="edit_user.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-primary me-1"><i class="fas fa-edit"></i> Edit</a>
-                                            <a href="#" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<?php echo $row['id']; ?>"><i class="fas fa-trash-alt"></i> Delete</a>
+                                            <a href="#" class="btn btn-sm btn-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal<?php echo $row['id']; ?>">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                            <a href="#" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<?php echo $row['id']; ?>">
+                                                <i class="fas fa-trash-alt"></i> Delete
+                                            </a>
                                         </td>
                                     </tr>
+                                    
+                                    <!-- Edit Modal for each user -->
+                                    <div class="modal fade" id="editModal<?php echo $row['id']; ?>" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="editModalLabel">Edit User</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <form action="dashboard.php" method="post">
+                                                    <div class="modal-body">
+                                                        <input type="hidden" name="edit_id" value="<?php echo $row['id']; ?>">
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="edit_username<?php echo $row['id']; ?>" class="form-label">Username</label>
+                                                            <input type="text" class="form-control" id="edit_username<?php echo $row['id']; ?>" name="edit_username" value="<?php echo $row['username']; ?>" required>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="edit_email<?php echo $row['id']; ?>" class="form-label">Email</label>
+                                                            <input type="email" class="form-control" id="edit_email<?php echo $row['id']; ?>" name="edit_email" value="<?php echo $row['email']; ?>" required>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="edit_phone<?php echo $row['id']; ?>" class="form-label">Phone</label>
+                                                            <input type="text" class="form-control" id="edit_phone<?php echo $row['id']; ?>" name="edit_phone" value="<?php echo $row['phone']; ?>" required>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="edit_description<?php echo $row['id']; ?>" class="form-label">Description</label>
+                                                            <textarea class="form-control" id="edit_description<?php echo $row['id']; ?>" name="edit_description" rows="3"><?php echo $row['description']; ?></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" name="edit_user" class="btn btn-primary">Save Changes</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                     
                                     <!-- Delete Modal for each user -->
                                     <div class="modal fade" id="deleteModal<?php echo $row['id']; ?>" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
